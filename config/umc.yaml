@@ -1,0 +1,53 @@
+server:
+  model: debug # gin server mode: release, debug, test，默认 release
+  health: true  # 是否开启监控
+  profiling: true # 开启性能分析
+
+grpc:
+  bind-address: 0.0.0.0 #grpc 绑定的ip地址
+  bind-port: 8082 # 端口号
+
+http:
+  bind-address: 0.0.0.0 #http 绑定的ip地址
+  bind-port: 8081 # 端口号
+
+#https 配置
+ssl:
+  bind-address: 0.0.0.0 #https 绑定的ip地址
+  bind-port: 8443 # 端口号
+  cert-file:
+  private-key-file:
+
+mysql:
+  host: 127.0.0.1:3306 # 主机连接
+  username: root
+  password: a@1234567
+  database: umc
+  max-idle-connections: 100 # 最大空闲连接数
+  max-open-connections: 100 # 最大打开连接数
+  max-connection-life-time: 10 # 空闲连接最大存活时间 单位 秒
+  log-level: info # GORM log level, 1: silent, 2:error, 3:warn, 4:info
+
+redis:
+  host: 127.0.0.1:6379
+  password:
+
+jwt:
+  issuer: UMC
+  key: O5MEgYOyVhC40PWeC8y4F7CwFiixuvzg # 服务端密钥
+  timeout: 600 # 单位分钟
+
+log:
+  path: /var/log/umc #日志输出的地址
+  max-age: 30 #日志最大保存的天数
+  max-size: 50 #日志单文件最大体积
+  level: debug # 日志级别 info debug error warn  dpanic panic fatal
+  format: console # 支持的日志输出格式，目前支持console和json两种。console其实就是text格式。
+  log-in-console: false #是否在控制台输出
+  level-encode: lower # 日志等级信息在日志中比编码格式 lower 小写 lower_color 小写带色  capital 大写 capital_color  大写带色
+
+queue:
+  model: kafka # 使用的消息队列
+
+kafka:
+  servers:
