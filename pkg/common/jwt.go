@@ -23,8 +23,8 @@ var (
 )
 
 func NewJWT(key string, timeout int, Issuer string, bufferTime int) *JWT {
-	j := &JWT{Key: []byte(key), Timeout: time.Duration(timeout) * time.Second, Issuer: Issuer}
-	j.BufferTime = j.Timeout - (time.Duration(bufferTime) * time.Second)
+	j := &JWT{Key: []byte(key), Timeout: time.Duration(timeout) * time.Minute, Issuer: Issuer}
+	j.BufferTime = j.Timeout - (time.Duration(bufferTime) * time.Minute)
 	return j
 }
 

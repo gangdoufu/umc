@@ -2,15 +2,19 @@ package service
 
 import (
 	"context"
+	"github.com/gangdoufu/umc/internal/umcserver/global"
 	"github.com/gangdoufu/umc/internal/umcserver/model"
+	"github.com/gangdoufu/umc/internal/umcserver/redis"
 	"github.com/gangdoufu/umc/internal/umcserver/service/vo"
 	"github.com/gangdoufu/umc/internal/umcserver/store"
+	"github.com/gangdoufu/umc/pkg/common"
 	"gorm.io/gorm"
 )
 
 type ITenantService interface {
 	CreateTenant(ctx context.Context, tenant *model.Tenant) error
 	UpdateBaseInfo(ctx context.Context, tenant *model.Tenant) error
+	UpdateToken(ctx context.Context, tenant *model.Tenant) error
 	CreateGroup(ctx context.Context, group *model.Group) error
 	CreateResource(ctx context.Context, resource *model.Resource) error
 	GroupAddResource(ctx context.Context, groupResource *model.GroupResource) error
@@ -50,6 +54,13 @@ func (s tenantService) CreateTenant(ctx context.Context, tenant *model.Tenant) e
 func (s tenantService) UpdateBaseInfo(ctx context.Context, tenant *model.Tenant) error {
 	tenants := s.factory.Tenants()
 	updateTenant := &model.Tenant{Desc: tenant.Desc}
+	updateTenant.ID = tenant.ID
+	return tenants.Update(updateTenant)
+}
+
+func (s tenantService) UpdateToken(ctx context.Context, tenant *model.Tenant) error {
+	tenants := s.factory.Tenants()
+	updateTenant := &model.Tenant{Token: tenant.Token}
 	updateTenant.ID = tenant.ID
 	return tenants.Update(updateTenant)
 }
@@ -104,4 +115,17 @@ func (s tenantService) ListGroupUsers(ctx context.Context, groupVo *vo.GroupVo) 
 func (s tenantService) ListGroupResource(ctx context.Context, groupId uint) ([]*model.GroupResource, error) {
 	resources := s.factory.GroupResources()
 	return resources.FindList(&model.GroupResource{GroupId: groupId})
+}
+
+func CheckTenantToken(ctx context.Context, token string, tenantId uint) bool {
+
+	tenantStore := store.NewTenantStore(global.DB)
+	tenant, err := tenantStore.FindById(tenantId)
+	if err != nil {
+		return false
+	}
+	if tenant.Token != common.MD5(token) {
+		return redis.CheckTenantDynamicToken(ctx, tenant.AppId, tenant.Token)
+	}
+	return true
 }

@@ -88,7 +88,7 @@ func (s BaseStore[T]) FindById(id uint) (*T, error) {
 
 func (s BaseStore[T]) FindList(t *T) ([]*T, error) {
 	var res []*T
-	if err := s.DB.Where(t).Find(res).Error; err != nil {
+	if err := s.DB.Where(t).Find(&res).Error; err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -100,7 +100,7 @@ func (s BaseStore[T]) FindListByPage(t *T, page *model.PageQueryVo) (*model.Page
 	if err := s.DB.Model(new(T)).Where(t).Count(&count).Error; err != nil {
 		return nil, err
 	}
-	if err := s.DB.Scopes(paginate(page)).Where(t).Find(res).Error; err != nil {
+	if err := s.DB.Scopes(paginate(page)).Where(t).Find(&res).Error; err != nil {
 		return nil, err
 	}
 	return model.NewPageResult(res, page, count), nil

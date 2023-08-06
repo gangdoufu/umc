@@ -4,6 +4,16 @@ type Server struct {
 	Model     string `mapstructure:"model" json:"model" yaml:"model"`
 	Health    bool   `mapstructure:"health" json:"health" yaml:"health"`
 	Profiling bool   `mapstructure:"profiling" json:"profiling" yaml:"profiling"`
+	Host      string `mapstructure:"host" json:"host" yaml:"host"`
+	UseSSL    bool   `mapstructure:"use-ssl" json:"use-ssl" yaml:"use-ssl"`
+}
+
+func (s *Server) GetHostUrl() string {
+	if s.UseSSL {
+		return "https://" + s.Host
+	} else {
+		return "http://" + s.Host
+	}
 }
 
 type Grpc struct {

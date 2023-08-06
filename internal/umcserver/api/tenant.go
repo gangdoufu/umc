@@ -83,10 +83,12 @@ func ReSetToken(c *gin.Context) {
 	param := c.Param("tenant_id")
 	if param == "" {
 		response.Error(c, errors.New("need tenant id"))
+		return
 	}
 	tenantId := cast.ToUint(param)
 	if tenantId == 0 {
 		response.Error(c, errors.New("need tenant id"))
+		return
 	}
 	token := common.RandToken(32)
 	tenant := &model.Tenant{
@@ -103,7 +105,7 @@ func ReSetToken(c *gin.Context) {
 		}
 	}()
 	ts := service.NewTenantService(db)
-	err = ts.UpdateBaseInfo(c.Request.Context(), tenant)
+	err = ts.UpdateToken(c.Request.Context(), tenant)
 	tenant.Token = token
 	if err != nil {
 		response.Error(c, err)
@@ -200,16 +202,19 @@ func GetTenantBaseInfo(c *gin.Context) {
 	param := c.Param("tenant_id")
 	if param == "" {
 		response.Error(c, errors.New("need tenant id"))
+		return
 	}
 	tenantId := cast.ToUint(param)
 	if tenantId == 0 {
 		response.Error(c, errors.New("need tenant id"))
+		return
 	}
 	db := global.DB
 	ts := service.NewTenantService(db)
 	tenant, err := ts.QueryTenantInfoById(c.Request.Context(), tenantId)
 	if err != nil {
 		response.Error(c, err)
+		return
 	} else {
 		response.SuccessWithData(c, tenant)
 	}
@@ -219,16 +224,19 @@ func ListTenantUsers(c *gin.Context) {
 	param := c.Param("tenant_id")
 	if param == "" {
 		response.Error(c, errors.New("need tenant id"))
+		return
 	}
 	tenantId := cast.ToUint(param)
 	if tenantId == 0 {
 		response.Error(c, errors.New("need tenant id"))
+		return
 	}
 	db := global.DB
 	ts := service.NewTenantService(db)
 	users, err := ts.ListTenantUsers(c.Request.Context(), tenantId)
 	if err != nil {
 		response.Error(c, err)
+		return
 	} else {
 		response.SuccessWithData(c, users)
 	}
@@ -238,16 +246,19 @@ func ListTenantGroups(c *gin.Context) {
 	param := c.Param("tenant_id")
 	if param == "" {
 		response.Error(c, errors.New("need tenant id"))
+		return
 	}
 	tenantId := cast.ToUint(param)
 	if tenantId == 0 {
 		response.Error(c, errors.New("need tenant id"))
+		return
 	}
 	db := global.DB
 	ts := service.NewTenantService(db)
 	groups, err := ts.ListTenantGroups(c.Request.Context(), tenantId)
 	if err != nil {
 		response.Error(c, err)
+		return
 	} else {
 		response.SuccessWithData(c, groups)
 	}
@@ -258,16 +269,19 @@ func ListGroupUsers(c *gin.Context) {
 	groupParam := c.Param("group_id")
 	if tenantParam == "" || groupParam == "" {
 		response.Error(c, errors.New("need tenant id and group id"))
+		return
 	}
 	tenantId, groupId := cast.ToUint(tenantParam), cast.ToUint(groupParam)
 	if tenantId == 0 || groupId == 0 {
 		response.Error(c, errors.New("need tenant id and group id"))
+		return
 	}
 	db := global.DB
 	ts := service.NewTenantService(db)
 	users, err := ts.ListGroupUsers(c.Request.Context(), &vo.GroupVo{GroupId: groupId, TenantId: tenantId})
 	if err != nil {
 		response.Error(c, err)
+		return
 	} else {
 		response.SuccessWithData(c, users)
 	}
@@ -277,16 +291,19 @@ func ListGroupResources(c *gin.Context) {
 	groupParam := c.Param("group_id")
 	if groupParam == "" {
 		response.Error(c, errors.New("need  group id"))
+		return
 	}
 	groupId := cast.ToUint(groupParam)
 	if groupId == 0 {
 		response.Error(c, errors.New("need group id"))
+		return
 	}
 	db := global.DB
 	ts := service.NewTenantService(db)
 	resource, err := ts.ListGroupResource(c.Request.Context(), groupId)
 	if err != nil {
 		response.Error(c, err)
+		return
 	} else {
 		response.SuccessWithData(c, resource)
 	}

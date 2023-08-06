@@ -1,7 +1,12 @@
+app:
+  name: 家庭云
+  desc:
 server:
   model: debug # gin server mode: release, debug, test，默认 release
   health: true  # 是否开启监控
   profiling: true # 开启性能分析
+  host: localhost # 主机的名称,用于拼接url
+  use-ssl: true # 是否使用https
 
 grpc:
   bind-address: 0.0.0.0 #grpc 绑定的ip地址
@@ -20,9 +25,9 @@ ssl:
 
 mysql:
   host: 127.0.0.1:3306 # 主机连接
-  username: root
-  password: a@1234567
-  database: umc
+  username:
+  password:
+  database:
   max-idle-connections: 100 # 最大空闲连接数
   max-open-connections: 100 # 最大打开连接数
   max-connection-life-time: 10 # 空闲连接最大存活时间 单位 秒
@@ -34,7 +39,7 @@ redis:
 
 jwt:
   issuer: UMC
-  key: O5MEgYOyVhC40PWeC8y4F7CwFiixuvzg # 服务端密钥
+  key:  # 服务端密钥
   timeout: 600 # 单位分钟
 
 log:
@@ -51,3 +56,9 @@ queue:
 
 kafka:
   servers:
+
+smtp:
+  host: smtp.126.com
+  port: 465
+  username:
+  password:

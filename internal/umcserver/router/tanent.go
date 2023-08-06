@@ -13,7 +13,7 @@ func initTenantManger(router *gin.RouterGroup) {
 		// 更新租户信息
 		tenant.POST("/update", api.UpdateTenantInfo)
 		// 重置token
-		tenant.GET("/reset_token", api.ReSetToken)
+		tenant.GET("/reset_token/:tenant_id", api.ReSetToken)
 		// 租户增加用户组
 		tenant.POST("/group/create", api.TenantAddGroup)
 		// 用户组增加资源权限
@@ -34,5 +34,12 @@ func initTenantManger(router *gin.RouterGroup) {
 }
 
 func initTenantWebApiRouter(router *gin.RouterGroup) {
+	// 获取租户的动态token
 
+	// 校验租户和token
+	tenant := router.Group("/tenant")
+	{
+		tenant.POST("/check_token")
+		tenant.POST("/dynamic_token")
+	}
 }

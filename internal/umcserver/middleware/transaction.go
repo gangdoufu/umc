@@ -1,32 +1,47 @@
 package middleware
 
 import (
-	"github.com/gangdoufu/umc/pkg/common"
+	"github.com/gangdoufu/umc/internal/umcserver/global"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
-func NewTransaction() func(c *gin.Context) {
+const (
+	ginContextTransaction = "umc-gin-transaction"
+)
+
+func Transaction(logger *zap.Logger) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		c.Next()
-		value, exists := c.Get(common.GinUseGlobalTransaction)
-		if exists {
-			if db, ok := value.(*gorm.DB); ok {
-				if c.Err() != nil {
-					db.Rollback()
-				} else {
-					db.Commit()
-				}
+		db := getGinDB(c)
+		if db != nil {
+			if len(c.Errors) > 0 {
+				GetLogger(c, logger).Info("request error db rollback", zap.Error(c.Err()))
+				db.Rollback()
+			} else {
+				db.Commit()
 			}
-
+			c.Set(ginContextTransaction, nil)
 		}
-
 	}
 }
-func SetTransaction(c *gin.Context, db *gorm.DB) {
-	c.Set(common.GinUseGlobalTransaction, db)
+
+func getGinDB(c *gin.Context) *gorm.DB {
+	value, exists := c.Get(ginContextTransaction)
+	if exists {
+		if v, ok := value.(*gorm.DB); ok {
+			return v
+		}
+	}
+	return nil
 }
 
-//func GetGinDB(global bool) *gorm.DB {
-//
-//}
+func SetGinDB(transaction bool, c *gin.Context) *gorm.DB {
+	if transaction {
+		db := global.DB.Begin()
+		c.Set(ginContextTransaction, db)
+		return db
+	}
+	return global.DB
+}

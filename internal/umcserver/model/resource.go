@@ -6,8 +6,8 @@ import (
 
 type Resource struct {
 	model.BaseModel
-	TenantId uint   // 所属租户
-	Name     string // 名称
-	Desc     string // 说明
-	Type     string // 资源类型
+	TenantId uint   `json:"tenant_id"` // 所属租户
+	Name     string `json:"name"`      // 名称
+	Desc     string `json:"desc"`      // 说明
+	Type     string `json:"type"`      // 资源类型
 }

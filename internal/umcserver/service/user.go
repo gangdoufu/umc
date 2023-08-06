@@ -3,27 +3,36 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/gangdoufu/umc/internal/umcserver/global"
+	"github.com/gangdoufu/umc/internal/umcserver/message/producer"
 	"github.com/gangdoufu/umc/internal/umcserver/model"
 	"github.com/gangdoufu/umc/internal/umcserver/redis"
+	"github.com/gangdoufu/umc/internal/umcserver/sender"
 	"github.com/gangdoufu/umc/internal/umcserver/service/vo"
 	"github.com/gangdoufu/umc/internal/umcserver/store"
 	"github.com/gangdoufu/umc/pkg/common"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"math/rand"
+	"net/url"
+	"path"
 	"time"
 )
 
 type IUserService interface {
-	Login(ctx context.Context, loginVo *vo.LoginVo) error
+	Login(ctx context.Context, loginVo *vo.LoginVo) (*model.UserLoginVo, error)
 	Register(ctx context.Context, user *model.User) error
 	CreateUser(ctx context.Context, user *model.User) error
+	RemoveUserGroup(ctx context.Context, groupVo *vo.UserGroupVo) error
 	AddUserToGroup(ctx context.Context, groupVo *vo.UserGroupVo) error
+	RemoveUserTenant(ctx context.Context, groupVo *vo.UserGroupVo) error
 	AddUserToTenant(ctx context.Context, groupVo *vo.UserGroupVo) error
 	UpdateUserInfo(ctx context.Context, user *model.User) error
 	QueryUserInfoById(ctx context.Context, userId uint) (*model.User, error)
 	ListUserTenants(ctx context.Context, userId uint) ([]*model.TenantShowVo, error)
 	ListUserGroups(ctx context.Context, groupVo *vo.UserGroupVo) ([]*model.Group, error)
+	ForgetPassword(ctx context.Context, account string) error
 }
 type userService struct {
 	factory store.IFactory
@@ -39,44 +48,90 @@ func NewUserService(db *gorm.DB) IUserService {
 	return &userService{factory: store.NewFactory(db)}
 }
 
+func (s *userService) ForgetPassword(ctx context.Context, account string) error {
+	byAccount, err := s.factory.Users().QueryByAccount(account)
+	if err != nil {
+		return err
+	}
+	if byAccount == nil {
+		return errors.New("account is not exist")
+	}
+	code := common.RandToken(16)
+	err = redis.SetUserResetPasswordCode(ctx, &redis.UserVerificationCodeVo{
+		UserId:   byAccount.ID,
+		Source:   byAccount.Email,
+		Code:     code,
+		CodeType: "user_forget_password",
+	})
+	if err != nil {
+		return err
+	}
+	u, _ := url.Parse(global.Config.Server.GetHostUrl())
+	info := sender.NewResetPasswordInfo(byAccount.Email, path.Join(u.Path, fmt.Sprintf("/manger/user/reset_password?code=%s", code)))
+	return producer.MessageProducer.SendVerificationCode(ctx, info)
+}
+
 // 登录
-func (s userService) Login(ctx context.Context, loginVo *vo.LoginVo) error {
+func (s *userService) Login(ctx context.Context, loginVo *vo.LoginVo) (*model.UserLoginVo, error) {
 	users := s.factory.Users()
 	var curLoginFun loginFun = loginByAccountAndPwd
 	if login, ok := loginFunMap[loginVo.Type]; ok {
 		curLoginFun = login
 	}
-	return curLoginFun(ctx, loginVo.Key, loginVo.Value, users)
+	user, err := curLoginFun(ctx, loginVo.Key, loginVo.Value, users)
+	if err != nil {
+		return nil, err
+	}
+	claims := global.Jwt.CreateClaims(common.BaseClaims{
+		UserID:   user.ID,
+		Account:  user.Account,
+		ClientId: uuid.New().String(),
+	})
+	token, err := global.Jwt.CreateToken(&claims)
+	if err != nil {
+		return nil, err
+	}
+	return &model.UserLoginVo{
+		ID:       user.ID,
+		Account:  user.Account,
+		ClientId: claims.ClientId,
+		Token:    token,
+	}, nil
 
 }
 
-type loginFun func(context.Context, string, string, store.IUserStore) error
+type loginFun func(context.Context, string, string, store.IUserStore) (*model.User, error)
 
 // 使用账号密码登录
-func loginByAccountAndPwd(ctx context.Context, account string, password string, users store.IUserStore) error {
+func loginByAccountAndPwd(ctx context.Context, account string, password string, users store.IUserStore) (*model.User, error) {
 	one, err := users.QueryUserPasswordByAccount(account)
+	if one == nil {
+		return nil, errors.New("账号不存在")
+	}
 	user := &model.User{}
 	user.Password = one.Password
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if one != nil {
 		if !user.CheckPassword(password) {
-			return errors.New(" 用户名或密码不正确")
+			return nil, errors.New(" 用户名或密码不正确")
 		}
-		return nil
+		user.ID = one.ID
+		user.Account = one.Account
+		return user, nil
 	} else {
-		return errors.New(" 用户名不存在")
+		return nil, errors.New(" 用户名不存在")
 	}
 
 }
 
 // 电话号码+验证码登录
-func loginByTelVerificationCode(ctx context.Context, tel, code string, users store.IUserStore) error {
+func loginByTelVerificationCode(ctx context.Context, tel, code string, users store.IUserStore) (*model.User, error) {
 	one, err := users.FindOne(&model.User{Tel: tel})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if one != nil {
 		uv := &redis.UserVerificationCodeVo{
@@ -86,19 +141,19 @@ func loginByTelVerificationCode(ctx context.Context, tel, code string, users sto
 			CodeType: "login_tel_code",
 		}
 		if !redis.CheckUserVerificationCode(ctx, uv) {
-			return errors.New("验证码不正确")
+			return nil, errors.New("验证码不正确")
 		}
-		return nil
+		return one, nil
 	} else {
-		return errors.New("用户名不存在")
+		return nil, errors.New("用户名不存在")
 	}
 }
 
 // 邮箱验证码登录
-func loginByEmailVerificationCode(ctx context.Context, email, code string, users store.IUserStore) error {
+func loginByEmailVerificationCode(ctx context.Context, email, code string, users store.IUserStore) (*model.User, error) {
 	one, err := users.FindOne(&model.User{Email: email})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if one != nil {
 		uv := &redis.UserVerificationCodeVo{
@@ -108,11 +163,11 @@ func loginByEmailVerificationCode(ctx context.Context, email, code string, users
 			CodeType: "login_email_code",
 		}
 		if !redis.CheckUserVerificationCode(ctx, uv) {
-			return errors.New("验证码不正确")
+			return nil, errors.New("验证码不正确")
 		}
-		return nil
+		return one, nil
 	} else {
-		return errors.New("用户名不存在")
+		return nil, errors.New("用户名不存在")
 	}
 }
 
@@ -298,6 +353,24 @@ func (s userService) AddUserToGroup(ctx context.Context, groupVo *vo.UserGroupVo
 		return err
 	}
 	return nil
+}
+
+func (s userService) RemoveUserGroup(ctx context.Context, groupVo *vo.UserGroupVo) error {
+	var userId, groupId = groupVo.UserId, groupVo.GroupId
+	group := s.factory.GroupUsers()
+	userGroup := &model.GroupUser{}
+	userGroup.GroupId = groupId
+	userGroup.UserId = userId
+	return group.RemoveUserGroup(userId, groupId)
+}
+
+func (s userService) RemoveUserTenant(ctx context.Context, groupVo *vo.UserGroupVo) error {
+	var userId, tenantId = groupVo.UserId, groupVo.TenantId
+	group := s.factory.GroupUsers()
+	userGroup := &model.GroupUser{}
+	userGroup.TenantId = tenantId
+	userGroup.UserId = userId
+	return group.RemoveUserTenant(userId, tenantId)
 }
 
 // 用户添加到租户 添加到租户 都是添加到默认的 guest 组

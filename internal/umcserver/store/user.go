@@ -30,7 +30,7 @@ func (u userStore) QueryUserPasswordByAccount(account string) (*model.UserPasswo
 
 // 依据账号查询信息
 func (u userStore) QueryByAccount(account string) (*model.User, error) {
-	var res *model.User
+	var res = &model.User{}
 	if err := u.GetDb().Model(&model.User{}).Where(&model.User{Account: account}).First(res).Error; err != nil {
 		if errors.Is(gorm.ErrRecordNotFound, err) {
 			return nil, nil

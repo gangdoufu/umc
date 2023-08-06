@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cast"
 	"os"
 	"strings"
+	"time"
 )
 
 func FileExist(path string) bool {
@@ -56,4 +57,12 @@ func RandToken(num int) string {
 	b := make([]byte, num)
 	crand.Read(b)
 	return fmt.Sprintf("%x", b)
+}
+
+func timeFormat(t time.Time) string {
+	return t.Format("2006/01/02 - 15:04:05")
+}
+
+func GetVarP[T any](t T) *T {
+	return &t
 }

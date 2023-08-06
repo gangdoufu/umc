@@ -99,11 +99,20 @@ func NewGroupStore(db *gorm.DB) IGroupStore {
 type IGroupUsersStore interface {
 	store.IBaseStore[model.GroupUser]
 	ListTenantUserIds(tenantId uint) ([]uint, error)
+	RemoveUserGroup(userId, groupId uint) error
+	RemoveUserTenant(userId, tenantId uint) error
 	ListGroupUserIds(tenantId, groupId uint) ([]uint, error)
 }
 
 type groupUsersStore struct {
 	store.BaseStore[model.GroupUser]
+}
+
+func (gu groupUsersStore) RemoveUserTenant(userId, tenantId uint) error {
+	return gu.GetDb().Delete(&model.GroupUser{UserId: userId, TenantId: tenantId}).Error
+}
+func (gu groupUsersStore) RemoveUserGroup(userId, groupId uint) error {
+	return gu.GetDb().Delete(&model.GroupUser{UserId: userId, GroupId: groupId}).Error
 }
 
 func (gu groupUsersStore) UserAddGroups(tenantId, userId uint, groupIds []uint) error {

@@ -20,12 +20,6 @@ func Success(c *gin.Context) {
 	c.JSON(200, &Response{Status: successStr})
 }
 
-func SuccessResponseWithData(data interface{}) *Response {
-	return &Response{
-		Status: successStr,
-		Data:   data,
-	}
-}
 func SuccessWithData(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, Response{
 		Status: successStr,
@@ -34,5 +28,6 @@ func SuccessWithData(c *gin.Context, data interface{}) {
 }
 
 func Error(c *gin.Context, e error) {
+	c.Error(e)
 	c.JSON(http.StatusOK, &Response{Status: errorStr, Message: e.Error()})
 }

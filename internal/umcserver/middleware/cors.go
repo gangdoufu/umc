@@ -24,6 +24,7 @@ func Cors() gin.HandlerFunc {
 	}
 }
 
+// 外部API 限制 来源IP需要是 租户
 //func CorsByRules() gin.HandlerFunc {
 //
 //}

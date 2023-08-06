@@ -12,6 +12,7 @@ const (
 )
 
 type Config struct {
+	App    App    `mapstructure:"app" json:"app" yaml:"app"`
 	Server Server `mapstructure:"server" json:"server" yaml:"server"`
 	Grpc   Grpc   `mapstructure:"grpc" json:"grpc" yaml:"grpc"`
 	Http   Http   `mapstructure:"http" json:"http" yaml:"http"`
@@ -22,6 +23,7 @@ type Config struct {
 	Log    Log    `mapstructure:"log" json:"log" yaml:"log"`
 	Queue  Queue  `mapstructure:"queue" json:"queue" yaml:"queue"`
 	Kafka  Kafka  `mapstructure:"kafka" json:"kafka" yaml:"kafka"`
+	Email  Email  `mapstructure:"email" json:"email" yaml:"email"`
 }
 
 // 命令行 > 环境变量 > 默认值

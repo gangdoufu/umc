@@ -12,6 +12,11 @@ const (
 	codeExpiration      = 5 * time.Minute // 验证码失效时间
 )
 
+const (
+	codeTypeLogin = "user_login_code"
+	codeTypeResetPassword
+)
+
 type UserVerificationCodeVo struct {
 	UserId   uint
 	Source   string
@@ -19,8 +24,18 @@ type UserVerificationCodeVo struct {
 	CodeType string
 }
 
-func (u UserVerificationCodeVo) GetKey() string {
+func (u *UserVerificationCodeVo) GetKey() string {
 	return strings.Join([]string{verificationCodeKey, cast.ToString(u.UserId), u.Source, u.CodeType}, "-")
+}
+
+func SetUserResetPasswordCode(ctx context.Context, vo *UserVerificationCodeVo) error {
+	vo.Code = codeTypeResetPassword
+	return SetUserVerificationCode(ctx, vo)
+}
+
+func SetUserLoginCode(ctx context.Context, vo *UserVerificationCodeVo) error {
+	vo.Code = codeTypeLogin
+	return SetUserVerificationCode(ctx, vo)
 }
 
 // 将验证码写入redis 默认有效时间为5分钟
