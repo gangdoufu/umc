@@ -34,13 +34,13 @@ func InitUserWebApiRouter(router *gin.RouterGroup) {
 	user := router.Group("/user")
 	{
 		// 校验用户权限
-		user.POST("/check_auth")
+		user.POST("/check_auth", api.CheckUserAuth)
 		//
-		user.POST("/check_jwt")
+		user.POST("/check_jwt", api.CheckJwt)
 		// 获取 用户的用户组
-		user.GET("/list_group/:user_id/:tenant_id")
+		user.GET("/list_group/:user_id/", api.ListTenantUserGroups)
 		// 获取用户组的资源
-		user.GET("/list_resources/:user_id/:group_id")
+		user.GET("/list_resources/:group_id", api.ListGroupResources)
 
 	}
 }

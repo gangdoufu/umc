@@ -8,11 +8,15 @@ import (
 	"github.com/gangdoufu/umc/internal/umcserver/redis"
 	"github.com/gangdoufu/umc/internal/umcserver/service"
 	"github.com/gangdoufu/umc/internal/umcserver/service/vo"
+	"github.com/gangdoufu/umc/pkg/common"
 	"github.com/gangdoufu/umc/pkg/response"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cast"
+	"golang.org/x/sync/singleflight"
 	"time"
 )
+
+var userGroups = singleflight.Group{}
 
 // 注册
 func Register(c *gin.Context) {
@@ -283,14 +287,78 @@ func GetUserGroups(c *gin.Context) {
 
 }
 
+// 校验用户Tokenc
 func CheckJwt(c *gin.Context) {
 	token := middleware.GetToken(c)
-	parseToken, err := global.Jwt.ParseToken(token)
+	// 并发处理
+	res, err, _ := userGroups.Do(token, func() (interface{}, error) {
+		return global.Jwt.ParseToken(token)
+	})
 	if err != nil {
 		response.Error(c, err)
 		return
 	}
+	parseToken := res.(*common.CustomClaims)
 	claims := parseToken.BaseClaims
 	response.SuccessWithData(c, &claims)
 	return
+}
+
+func CheckUserAuth(c *gin.Context) {
+	var userResource = &vo.UserResourceVo{}
+	err := c.ShouldBindJSON(userResource)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	if userResource.UserId == 0 || userResource.ResourceCode == "" {
+		response.Error(c, errors.New("user 或者资源信息不可为空"))
+		return
+	}
+	id := middleware.GetTenantId(c)
+	userResource.TenantId = id
+	db := global.DB
+	us := service.NewUserService(db)
+	err = us.CheckUserResource(c.Request.Context(), userResource)
+	if err != nil {
+		response.Error(c, err)
+		return
+	} else {
+		response.Success(c)
+		return
+	}
+}
+
+func ListTenantUserGroups(c *gin.Context) {
+	id := middleware.GetTenantId(c)
+	param := c.Param("user_id")
+	if id == 0 || param == "" {
+		response.Error(c, errors.New("缺少参,用户id或租户id"))
+		return
+	}
+	db := global.DB
+	us := service.NewUserService(db)
+	groups, err := us.ListUserGroups(c.Request.Context(), &vo.UserGroupVo{UserId: cast.ToUint(param), TenantId: id})
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.SuccessWithData(c, groups)
+}
+
+func ListTenantGroupResources(c *gin.Context) {
+	id := middleware.GetTenantId(c)
+	param := c.Param("group_id")
+	if id == 0 || param == "" {
+		response.Error(c, errors.New("缺少参,用户组id或租户id"))
+		return
+	}
+	db := global.DB
+	ts := service.NewTenantService(db)
+	resource, err := ts.ListGroupResource(c.Request.Context(), cast.ToUint(param))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.SuccessWithData(c, resource)
 }

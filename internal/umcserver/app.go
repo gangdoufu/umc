@@ -7,6 +7,8 @@ import (
 	"github.com/gangdoufu/umc/internal/umcserver/redis"
 	"github.com/gangdoufu/umc/internal/umcserver/router"
 	"github.com/gin-gonic/gin"
+	"github.com/unrolled/secure"
+	"strconv"
 )
 
 type UMCApp struct {
@@ -21,7 +23,32 @@ func (a *UMCApp) Run() {
 	global.Config = config.LoadConfig()
 	InitCommon(global.Config)
 	router.InitRouter(a.Engin)
-	a.Engin.Run("0.0.0.0:8088")
+
+	if global.Config.Server.UseSSL {
+		ssl := global.Config.SSL
+		a.Engin.Use(TlsHandler(8088))
+		a.Engin.RunTLS(":"+strconv.Itoa(8088), ssl.CertFile, ssl.PrivateKeyFile)
+	} else {
+		a.Engin.Run("0.0.0.0:8088")
+	}
+
+}
+
+func TlsHandler(port int) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		secureMiddleware := secure.New(secure.Options{
+			SSLRedirect: true,
+			SSLHost:     ":" + strconv.Itoa(port),
+		})
+		err := secureMiddleware.Process(c.Writer, c.Request)
+
+		// If there was an error, do not continue.
+		if err != nil {
+			return
+		}
+
+		c.Next()
+	}
 }
 
 func InitCommon(config *config.Config) {

@@ -34,6 +34,7 @@ func InitRouter(router *gin.Engine) {
 func InitWebApi(router *gin.Engine) {
 	webApi := router.Group("/api")
 	{
+		webApi.Use(middleware.WebApiToken())
 		InitUserWebApiRouter(webApi)
 		initTenantWebApiRouter(webApi)
 	}

@@ -33,6 +33,7 @@ type IUserService interface {
 	ListUserTenants(ctx context.Context, userId uint) ([]*model.TenantShowVo, error)
 	ListUserGroups(ctx context.Context, groupVo *vo.UserGroupVo) ([]*model.Group, error)
 	ForgetPassword(ctx context.Context, account string) error
+	CheckUserResource(ctx context.Context, vo *vo.UserResourceVo) error
 }
 type userService struct {
 	factory store.IFactory
@@ -409,4 +410,32 @@ func (s userService) ListUserGroups(ctx context.Context, groupVo *vo.UserGroupVo
 func (s userService) QueryUserInfoById(ctx context.Context, userId uint) (*model.User, error) {
 	users := s.factory.Users()
 	return users.FindById(userId)
+}
+
+func (s userService) CheckUserResource(ctx context.Context, vo *vo.UserResourceVo) error {
+	groupResources := s.factory.GroupResources()
+	resources := s.factory.Resources()
+	groups := s.factory.GroupUsers()
+
+	group, err := groups.FindOne(&model.GroupUser{GroupId: vo.GroupId, UserId: vo.UserId})
+	if err != nil {
+		return err
+	} else if group == nil {
+		return errors.New("用户不属于当前组")
+	}
+	resource, err := resources.FindOne(&model.Resource{Code: vo.ResourceCode})
+	if err != nil {
+		return err
+	} else if resource == nil {
+		return errors.New("资源不存在")
+	}
+
+	groupResource, err := groupResources.FindOne(&model.GroupResource{ResourceId: resource.ID, GroupId: vo.GroupId})
+	if err != nil {
+		return err
+	}
+	if groupResource == nil {
+		return errors.New("用户对资源无权限")
+	}
+	return nil
 }

@@ -38,8 +38,8 @@ func initTenantWebApiRouter(router *gin.RouterGroup) {
 
 	// 校验租户和token
 	tenant := router.Group("/tenant")
-	{
-		tenant.POST("/check_token")
+	{ //
+		tenant.POST("/check_token", api.CheckJwt)
 		tenant.POST("/dynamic_token")
 	}
 }

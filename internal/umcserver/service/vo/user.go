@@ -27,6 +27,15 @@ type UserGroupVo struct {
 	TenantId uint
 }
 
+type UserResourceVo struct {
+	UserId       uint
+	GroupId      uint
+	TenantId     uint
+	ResourceName string
+	ResourceId   string
+	ResourceCode string
+}
+
 type UserVo struct {
 	UserId    uint
 	CreateAt  *time.Time `json:"create_at"`

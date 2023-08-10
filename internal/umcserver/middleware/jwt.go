@@ -77,10 +77,14 @@ func CheckToken(c *gin.Context) (success bool, newToken string) {
 	return
 }
 
+func GetTenantId(c *gin.Context) uint {
+	tenantId := cast.ToUint(c.Request.Header.Get(tenantId))
+	return tenantId
+}
 func WebApiToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.Request.Header.Get(tenantToken)
-		tenantId := cast.ToUint(c.Request.Header.Get(tenantId))
+		tenantId := GetTenantId(c)
 
 		if token == "" || tenantId == 0 {
 			response.Error(c, errors.New("请求中没有对应租户和token信息鉴权失败"))
